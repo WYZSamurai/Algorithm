@@ -1,7 +1,7 @@
 import torch
 
-device = torch.device("cpu")
-# device = torch.device("cuda")
+# device = torch.device("cpu")
+device = torch.device("cuda")
 
 
 # 定义一个函数来交换n阶矩阵的每两行
@@ -19,14 +19,11 @@ def swap_rows(matrix: torch.Tensor):
 
 
 if __name__ == "__main__":
-    # n = 4
-    # matrix = torch.arange(n*n).reshape(n, n)
-    # print(matrix.shape[0])
-    # new_matrix = swap_rows(matrix)
-    # print(new_matrix)
     new_order = torch.arange(100).reshape(10, 10)
     print(new_order)
-    temp = new_order
-    temp[1::2, 4:] = new_order[0::2, 4:]
-    temp[0::2, 4:] = new_order[1::2, 4:]
+    temp = new_order[0::2, 4:].clone()
+    new_order[0::2, 4:] = new_order[1::2, 4:]
+    new_order[1::2, 4:] = temp
     print(temp)
+    print(new_order)
+    print(int(2.999))

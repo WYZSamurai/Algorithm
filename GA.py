@@ -8,6 +8,7 @@ if torch.cuda.is_available():
     device = torch.device("cuda")
 else:
     device = torch.device("cpu")
+# device = torch.device("cpu")
 cpu = torch.device("cpu")
 
 
@@ -19,7 +20,7 @@ def func(x: torch.Tensor):
 
 # 绘制图像
 def prin(min: float, max: float, n: int):
-    x = torch.linspace(min, max, n, device=device, dtype=torch.float64)
+    x = torch.linspace(min, max, n, device=device, dtype=torch.float)
     y = func(x)
     fig, ax = plt.subplots()
     ax.plot(x.to(device=cpu), y.to(device=cpu))
@@ -33,16 +34,17 @@ def prin2(x: torch.Tensor, y: torch.Tensor):
 
 
 # 解码过程
-def decode(dna: torch.Tensor, L: int, mx: float, md: float):
+def decode(dna: torch.Tensor, mx: float, md: float):
+    L = dna.shape[1]
     # 设置大小比例
     scale = float((md-mx)/(pow(2, L)-1))
     # 二进制向量转为十进制向量
     temp = (2*torch.ones(size=(L,))).pow(torch.arange(0, L)
-                                         ).to(device=device, dtype=torch.int64)
+                                         ).to(device=device, dtype=torch.float)
     temp, _ = torch.sort(temp, descending=True)
     temp = torch.diag(temp)
     t2 = torch.mm(dna, temp)
-    temp = torch.ones(size=(L, 1)).to(device=device, dtype=torch.int64)
+    temp = torch.ones(size=(L, 1)).to(device=device, dtype=torch.float)
     # 定义个体十进制值
     x = scale*torch.mm(t2, temp)+mx
     # print("X值为：", x)
@@ -69,7 +71,8 @@ def decode(dna: torch.Tensor, L: int, mx: float, md: float):
 
 
 # 选择阶段
-def selection(dna: torch.Tensor, fit: torch.Tensor, NP: int):
+def selection(dna: torch.Tensor, fit: torch.Tensor):
+    NP = dna.shape[0]
     # 赌轮盘选择
     P = (fit/fit.sum()).reshape(NP,)
     # print("群体概率为：", P)
@@ -82,27 +85,15 @@ def selection(dna: torch.Tensor, fit: torch.Tensor, NP: int):
 
 
 # 交叉操作
-def crossover(dna: torch.Tensor, Pc: float, L: int, NP: int):
+def crossover(dna: torch.Tensor, Pc: float):
+    L = dna.shape[1]
     P = torch.rand(size=(1,)).to(device=cpu).item()
-    begin = torch.randint(0, L, size=(NP,)).to(device=cpu, dtype=torch.int64)
     if P < Pc:
-        for i in range(0, NP, 2):
-            temp = dna[i, begin[i]:]
-            dna[i, begin[i]:] = dna[i+1, begin[i]:]
-            dna[i+1, begin[i]:] = temp
-    return dna
-
-
-# 交叉操作
-def crossover1(dna: torch.Tensor, Pc: float, L: int, NP: int):
-    P = torch.rand(size=(1,)).item()
-    if P < Pc:
-        for i in range(0, NP, 2):
-            begin = torch.randint(0, L, size=(
-                1,), device=device, dtype=torch.int).item()
-            temp = dna[i, begin:]
-            dna[i, begin:] = dna[i+1, begin:]
-            dna[i+1, begin:] = temp
+        cut = torch.randint(int(L/2), L, size=(1,)
+                            ).to(device=cpu, dtype=torch.int).item()
+        temp = dna[0::2, cut:].clone()
+        dna[0::2, cut:] = dna[1::2, cut:]
+        dna[1::2, cut:] = temp
     return dna
 
 
@@ -115,7 +106,20 @@ def bianyi(a: int):
 
 
 # 变异操作
-def mutation(dna: torch.Tensor, L: int, Pm: float, NP: int):
+def mutation(dna: torch.Tensor, Pm: float):
+    (NP, L) = dna.shape
+    for i in range(NP):
+        P = torch.rand(size=(1,)).item()
+        if P < Pm:
+            tubian = torch.randint(0, L, size=(
+                1,), device=device, dtype=torch.int)
+            dna[i, tubian.item()] = bianyi(dna[i, tubian.item()])
+    return dna
+
+
+# 变异操作
+def mutation(dna: torch.Tensor, Pm: float):
+    (NP, L) = dna.shape
     for i in range(NP):
         P = torch.rand(size=(1,)).item()
         if P < Pm:
@@ -131,24 +135,24 @@ def GA(NP=50, L=20, G=100, Pc=0.8, Pm=0.05, mx=0, md=10):
     # 保存最佳x值
     xbest = torch.zeros(size=(G,)).to(device=device)
     # 保存最佳y值
-    ybest = torch.zeros(size=(G,)).to(device=device)
+    ybest = xbest.clone()
 
     # 初始化种群编码（NP，L）
     dna = torch.randint(0, 2, size=(NP, L)).to(
-        device=device, dtype=torch.int64)
+        device=device, dtype=torch.float)
 
     # GA循环
     for t in range(G):
         print("第", t+1, "轮迭代")
         # print("群体dna为：", dna)
         # 解码及计算适应值
-        fit, xbest[t], ybest[t] = decode(dna=dna, L=L, mx=mx, md=md)
+        fit, xbest[t], ybest[t] = decode(dna=dna, mx=mx, md=md)
         # 选择阶段
-        dna = selection(dna=dna, fit=fit, NP=NP)
+        dna = selection(dna=dna, fit=fit)
         # 交叉操作
-        dna = crossover(dna=dna, Pc=Pc, L=L, NP=NP)
+        dna = crossover(dna=dna, Pc=Pc)
         # 变异操作
-        dna = mutation(dna=dna, L=L, Pm=Pm, NP=NP)
+        dna = mutation(dna=dna, Pm=Pm)
 
     minindex = torch.argmin(ybest)
     print("最佳x值为：", xbest[minindex].item())
@@ -157,7 +161,8 @@ def GA(NP=50, L=20, G=100, Pc=0.8, Pm=0.05, mx=0, md=10):
     return xbest, ybest
 
 
-def main():
+if __name__ == "__main__":
+
     start_time = time.time()
     G = 1000
     _, ybest = GA(G=G, NP=150, Pc=0.80, Pm=0.050)
@@ -165,7 +170,3 @@ def main():
     end_time = time.time()
     print("算法耗时：", end_time-start_time)
     prin2(x, ybest)
-
-
-if __name__ == "__main__":
-    main()
