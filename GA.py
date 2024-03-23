@@ -18,21 +18,6 @@ def func(x: torch.Tensor):
     return y
 
 
-# 绘制图像
-def prin(min: float, max: float, n: int):
-    x = torch.linspace(min, max, n, device=device, dtype=torch.float)
-    y = func(x)
-    fig, ax = plt.subplots()
-    ax.plot(x.to(device=cpu), y.to(device=cpu))
-    plt.show()
-
-
-def prin2(x: torch.Tensor, y: torch.Tensor):
-    fig, ax = plt.subplots()
-    ax.plot(x.to(device=cpu), y.to(device=cpu))
-    plt.show()
-
-
 # 解码过程
 def decode(dna: torch.Tensor, mx: float, md: float):
     L = dna.shape[1]
@@ -118,7 +103,7 @@ def mutation(dna: torch.Tensor, Pm: float):
 
 
 # 变异操作
-def mutation(dna: torch.Tensor, Pm: float):
+def mutation1(dna: torch.Tensor, Pm: float):
     (NP, L) = dna.shape
     for i in range(NP):
         P = torch.rand(size=(1,)).item()
@@ -169,4 +154,7 @@ if __name__ == "__main__":
     x = torch.arange(1, G+1).to(device=cpu)
     end_time = time.time()
     print("算法耗时：", end_time-start_time)
-    prin2(x, ybest)
+
+    fig, ax = plt.subplots()
+    ax.plot(x.to(device=cpu), ybest.to(device=cpu))
+    plt.show()
