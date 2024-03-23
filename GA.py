@@ -22,32 +22,31 @@ def prin(min: float, max: float, n: int):
     x = torch.linspace(min, max, n, device=device, dtype=torch.float64)
     y = func(x)
     fig, ax = plt.subplots()
-    ax.plot(x.to(torch.device("cpu")), y.to(torch.device("cpu")))
+    ax.plot(x.to(device=cpu), y.to(device=cpu))
     plt.show()
 
 
 def prin2(x: torch.Tensor, y: torch.Tensor):
     fig, ax = plt.subplots()
-    ax.plot(x.to(torch.device("cpu")), y.to(torch.device("cpu")))
+    ax.plot(x.to(device=cpu), y.to(device=cpu))
     plt.show()
 
 
 # 解码过程
-def decode(dna: torch.Tensor, NP: int, L: int, mx: float, md: float):
+def decode(dna: torch.Tensor, L: int, mx: float, md: float):
     # 设置大小比例
     scale = float((md-mx)/(pow(2, L)-1))
-    # 定义个体十进制值
-    x = torch.zeros(size=(NP,), device=device, dtype=torch.float64)
-    # 定义个体适应度
-    fit = torch.zeros(size=(NP,), device=device, dtype=torch.float64)
     # 二进制向量转为十进制向量
-    for i in range(NP):
-        for j in range(L):
-            x[i] = x[i]+dna[i][j]*pow(2, L-1-j)
-        # 每个个体的x值
-        x[i] = mx+x[i]*scale
-        # 个体适应度(由于求最小值，则需要取负，以让适应值最大)
-        fit[i] = -func(x[i])
+    temp = (2*torch.ones(size=(L,))).pow(torch.arange(0, L))
+    temp, _ = torch.sort(temp, descending=True)
+    temp = torch.diag(temp).to(device=device, dtype=torch.int64)
+    t2 = torch.mm(dna, temp)
+    temp = torch.ones(size=(L, 1)).to(device=device, dtype=torch.int64)
+    # 定义个体十进制值
+    x = scale*torch.mm(t2, temp)+mx
+    # print("X值为：", x)
+    # 定义个体适应度
+    fit = -func(x=x)
     # print("初始适应值为：", fit)
     # print("平均适应值为：", (fit.sum()/NP).item())
     # 筛出适应度最值
@@ -57,43 +56,7 @@ def decode(dna: torch.Tensor, NP: int, L: int, mx: float, md: float):
     # dnabest = dna[maxindex]
     xbest = x[maxindex]
     ybest = func(xbest)
-    print("此代最小值为：", ybest.item())
-    # 适应值归一化操作
-    # 注意dna全部一致情况
-    if fit[maxindex]-fit[minindex] == 0:
-        fit = fit/fit.sum()
-    else:
-        fit = (fit-fit[minindex])/(fit[maxindex]-fit[minindex])
-    # print("归一化适应值为：", fit)
-    return fit, xbest, ybest
-
-
-# 解码过程
-def decode1(dna: torch.Tensor, NP: int, L: int, mx: float, md: float):
-    # 设置大小比例
-    scale = float((md-mx)/(pow(2, L)-1))
-    # 定义个体十进制值
-    x = torch.zeros(size=(NP,), device=device, dtype=torch.float64)
-    # 定义个体适应度
-    fit = torch.zeros(size=(NP,), device=device, dtype=torch.float64)
-    # 二进制向量转为十进制向量
-    for i in range(NP):
-        for j in range(L):
-            x[i] = x[i]+dna[i][j]*pow(2, L-1-j)
-        # 每个个体的x值
-        x[i] = mx+x[i]*scale
-        # 个体适应度(由于求最小值，则需要取负，以让适应值最大)
-        fit[i] = -func(x[i])
-    # print("初始适应值为：", fit)
-    # print("平均适应值为：", (fit.sum()/NP).item())
-    # 筛出适应度最值
-    maxindex = torch.argmax(fit)
-    minindex = torch.argmin(fit)
-    # 保存最佳个体的dna、十进制值、适应度
-    # dnabest = dna[maxindex]
-    xbest = x[maxindex]
-    ybest = func(xbest)
-    print("此代最小值为：", ybest.item())
+    # print("此代最小值为：", ybest.item())
     # 适应值归一化操作
     # 注意dna全部一致情况
     if fit[maxindex]-fit[minindex] == 0:
@@ -106,6 +69,23 @@ def decode1(dna: torch.Tensor, NP: int, L: int, mx: float, md: float):
 
 # 选择阶段
 def selection(dna: torch.Tensor, fit: torch.Tensor, NP: int):
+    # 设置个体选择概率
+    P = torch.zeros(size=(NP,), device=device, dtype=torch.float64)
+    # 赌轮盘选择
+    sumfit = fit.sum()
+    for i in range(NP):
+        P[i] = fit[i]/sumfit
+    # 打印群体概率
+    # print(P)
+    # 根据概率选择个体
+    # replacement是否放回
+    index = torch.multinomial(input=P, num_samples=NP, replacement=True)
+    dna = dna[index]
+    return dna
+
+
+# 选择阶段
+def selection1(dna: torch.Tensor, fit: torch.Tensor, NP: int):
     # 设置个体选择概率
     P = torch.zeros(size=(NP,), device=device, dtype=torch.float64)
     # 赌轮盘选择
@@ -168,15 +148,16 @@ def GA(NP=50, L=20, G=100, Pc=0.8, Pm=0.05, mx=0, md=10):
     epochs = torch.zeros(size=(G,), device=device)
 
     # 初始化种群编码（NP，L）
-    dna = torch.randint(0, 2, size=(NP, L), device=device, dtype=torch.int)
+    dna = torch.randint(0, 2, size=(NP, L)).to(
+        device=device, dtype=torch.int64)
 
     # GA循环
     for t in range(G):
-        print("第", t+1, "轮迭代")
+        # print("第", t+1, "轮迭代")
         epochs[t] = t+1
         # print("群体dna为：", dna)
         # 解码及计算适应值
-        fit, xbest[t], ybest[t] = decode(dna=dna, NP=NP, L=L, mx=mx, md=md)
+        fit, xbest[t], ybest[t] = decode(dna=dna, L=L, mx=mx, md=md)
         # 选择阶段
         dna = selection(dna=dna, fit=fit, NP=NP)
         # 交叉操作
@@ -191,9 +172,13 @@ def GA(NP=50, L=20, G=100, Pc=0.8, Pm=0.05, mx=0, md=10):
     return xbest, ybest, epochs
 
 
-if __name__ == "__main__":
+def main():
     start_time = time.time()
-    xbest, y, x = GA(G=500, NP=150, Pc=0.80, Pm=0.050)
+    xbest, y, x = GA(G=1000, NP=150, Pc=0.80, Pm=0.050)
     end_time = time.time()
     print("算法耗时：", end_time-start_time)
     prin2(x, y)
+
+
+if __name__ == "__main__":
+    main()
