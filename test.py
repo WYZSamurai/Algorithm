@@ -4,16 +4,29 @@ device = torch.device("cpu")
 # device = torch.device("cuda")
 
 
+# 定义一个函数来交换n阶矩阵的每两行
+def swap_rows(matrix: torch.Tensor):
+    # 确保矩阵有偶数行
+    if matrix.shape[0] % 2 != 0:
+        raise ValueError("矩阵必须有偶数行才能交换每两行。")
+
+    # 为行创建一个新的索引顺序
+    new_order = torch.arange(matrix.shape[0])
+    new_order[::2], new_order[1::2] = new_order[1::2], new_order[::2]
+
+    # 返回交换行后的矩阵
+    return matrix[new_order]
+
+
 if __name__ == "__main__":
-    # 生成01数组
-    dna = torch.randint(0, 2, size=(3, 5)).to(dtype=torch.int64)
-    # print(dna)
-    t2 = (2*torch.ones(size=(5,))).pow(torch.arange(0, 5))
-    print(t2)
-    t2, b = torch.sort(t2, descending=True)
-    t2 = torch.diag(t2).to(dtype=torch.int64)
-    dna = torch.mm(dna, t2)
-    # print(dna)
-    t2 = torch.ones(size=(5, 1)).to(dtype=torch.int64)
-    # print(t2)
-    # print(torch.mm(dna, t2))
+    # n = 4
+    # matrix = torch.arange(n*n).reshape(n, n)
+    # print(matrix.shape[0])
+    # new_matrix = swap_rows(matrix)
+    # print(new_matrix)
+    new_order = torch.arange(100).reshape(10, 10)
+    print(new_order)
+    temp = new_order
+    temp[1::2, 4:] = new_order[0::2, 4:]
+    temp[0::2, 4:] = new_order[1::2, 4:]
+    print(temp)

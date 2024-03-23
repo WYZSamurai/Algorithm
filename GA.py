@@ -37,9 +37,10 @@ def decode(dna: torch.Tensor, L: int, mx: float, md: float):
     # 设置大小比例
     scale = float((md-mx)/(pow(2, L)-1))
     # 二进制向量转为十进制向量
-    temp = (2*torch.ones(size=(L,))).pow(torch.arange(0, L))
+    temp = (2*torch.ones(size=(L,))).pow(torch.arange(0, L)
+                                         ).to(device=device, dtype=torch.int64)
     temp, _ = torch.sort(temp, descending=True)
-    temp = torch.diag(temp).to(device=device, dtype=torch.int64)
+    temp = torch.diag(temp)
     t2 = torch.mm(dna, temp)
     temp = torch.ones(size=(L, 1)).to(device=device, dtype=torch.int64)
     # 定义个体十进制值
@@ -56,7 +57,7 @@ def decode(dna: torch.Tensor, L: int, mx: float, md: float):
     # dnabest = dna[maxindex]
     xbest = x[maxindex]
     ybest = func(xbest)
-    # print("此代最小值为：", ybest.item())
+    print("此代最小值为：", ybest.item())
     # 适应值归一化操作
     # 注意dna全部一致情况
     if fit[maxindex]-fit[minindex] == 0:
@@ -69,40 +70,31 @@ def decode(dna: torch.Tensor, L: int, mx: float, md: float):
 
 # 选择阶段
 def selection(dna: torch.Tensor, fit: torch.Tensor, NP: int):
-    # 设置个体选择概率
-    P = torch.zeros(size=(NP,), device=device, dtype=torch.float64)
     # 赌轮盘选择
-    sumfit = fit.sum()
-    for i in range(NP):
-        P[i] = fit[i]/sumfit
-    # 打印群体概率
-    # print(P)
+    P = (fit/fit.sum()).reshape(NP,)
+    # print("群体概率为：", P)
+
     # 根据概率选择个体
     # replacement是否放回
     index = torch.multinomial(input=P, num_samples=NP, replacement=True)
-    dna = dna[index]
-    return dna
-
-
-# 选择阶段
-def selection1(dna: torch.Tensor, fit: torch.Tensor, NP: int):
-    # 设置个体选择概率
-    P = torch.zeros(size=(NP,), device=device, dtype=torch.float64)
-    # 赌轮盘选择
-    sumfit = fit.sum()
-    for i in range(NP):
-        P[i] = fit[i]/sumfit
-    # 打印群体概率
-    # print(P)
-    # 根据概率选择个体
-    # replacement是否放回
-    index = torch.multinomial(input=P, num_samples=NP, replacement=True)
-    dna = dna[index]
+    dna = dna[index, :]
     return dna
 
 
 # 交叉操作
 def crossover(dna: torch.Tensor, Pc: float, L: int, NP: int):
+    P = torch.rand(size=(1,)).to(device=cpu).item()
+    begin = torch.randint(0, L, size=(NP,)).to(device=cpu, dtype=torch.int64)
+    if P < Pc:
+        for i in range(0, NP, 2):
+            temp = dna[i, begin[i]:]
+            dna[i, begin[i]:] = dna[i+1, begin[i]:]
+            dna[i+1, begin[i]:] = temp
+    return dna
+
+
+# 交叉操作
+def crossover1(dna: torch.Tensor, Pc: float, L: int, NP: int):
     P = torch.rand(size=(1,)).item()
     if P < Pc:
         for i in range(0, NP, 2):
@@ -130,11 +122,6 @@ def mutation(dna: torch.Tensor, L: int, Pm: float, NP: int):
             tubian = torch.randint(0, L, size=(
                 1,), device=device, dtype=torch.int)
             dna[i, tubian.item()] = bianyi(dna[i, tubian.item()])
-            # tubian = torch.randint(0, 2, size=(
-            #     L,), device=device, dtype=torch.int)
-            # for j in range(L):
-            #     if tubian[j].item() == 1:
-            #         dna[i, j] = bianyi(dna[i, j])
     return dna
 
 
@@ -142,10 +129,9 @@ def mutation(dna: torch.Tensor, L: int, Pm: float, NP: int):
 # NP->种群数 L->编码长度 G->迭代次数 Pc->交叉概率 Pm->变异概率 mx->x最小值 md->x最大值
 def GA(NP=50, L=20, G=100, Pc=0.8, Pm=0.05, mx=0, md=10):
     # 保存最佳x值
-    xbest = torch.zeros(size=(G,), device=device)
+    xbest = torch.zeros(size=(G,)).to(device=device)
     # 保存最佳y值
-    ybest = torch.zeros(size=(G,), device=device)
-    epochs = torch.zeros(size=(G,), device=device)
+    ybest = torch.zeros(size=(G,)).to(device=device)
 
     # 初始化种群编码（NP，L）
     dna = torch.randint(0, 2, size=(NP, L)).to(
@@ -153,8 +139,7 @@ def GA(NP=50, L=20, G=100, Pc=0.8, Pm=0.05, mx=0, md=10):
 
     # GA循环
     for t in range(G):
-        # print("第", t+1, "轮迭代")
-        epochs[t] = t+1
+        print("第", t+1, "轮迭代")
         # print("群体dna为：", dna)
         # 解码及计算适应值
         fit, xbest[t], ybest[t] = decode(dna=dna, L=L, mx=mx, md=md)
@@ -169,15 +154,17 @@ def GA(NP=50, L=20, G=100, Pc=0.8, Pm=0.05, mx=0, md=10):
     print("最佳x值为：", xbest[minindex].item())
     print("函数最小值为：", ybest[minindex].item())
 
-    return xbest, ybest, epochs
+    return xbest, ybest
 
 
 def main():
     start_time = time.time()
-    xbest, y, x = GA(G=1000, NP=150, Pc=0.80, Pm=0.050)
+    G = 1000
+    _, ybest = GA(G=G, NP=150, Pc=0.80, Pm=0.050)
+    x = torch.arange(1, G+1).to(device=cpu)
     end_time = time.time()
     print("算法耗时：", end_time-start_time)
-    prin2(x, y)
+    prin2(x, ybest)
 
 
 if __name__ == "__main__":
