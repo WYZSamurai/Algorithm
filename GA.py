@@ -4,11 +4,13 @@ import time
 
 
 # 选择设备
-if torch.cuda.is_available():
-    device = torch.device("cuda")
-else:
-    device = torch.device("cpu")
-# device = torch.device("cpu")
+# if torch.cuda.is_available():
+#     device = torch.device("cuda")
+# else:
+#     device = torch.device("cpu")
+
+
+device = torch.device("cpu")
 cpu = torch.device("cpu")
 
 
@@ -61,7 +63,6 @@ def selection(dna: torch.Tensor, fit: torch.Tensor):
     # 赌轮盘选择
     P = (fit/fit.sum()).reshape(NP,)
     # print("群体概率为：", P)
-
     # 根据概率选择个体
     # replacement是否放回
     index = torch.multinomial(input=P, num_samples=NP, replacement=True)
@@ -82,35 +83,12 @@ def crossover(dna: torch.Tensor, Pc: float):
     return dna
 
 
-def bianyi(a: int):
-    if a == 1:
-        a = 0
-    elif a == 0:
-        a = 1
-    return a
-
-
 # 变异操作
 def mutation(dna: torch.Tensor, Pm: float):
     (NP, L) = dna.shape
-    for i in range(NP):
-        P = torch.rand(size=(1,)).item()
-        if P < Pm:
-            tubian = torch.randint(0, L, size=(
-                1,), device=device, dtype=torch.int)
-            dna[i, tubian.item()] = bianyi(dna[i, tubian.item()])
-    return dna
-
-
-# 变异操作
-def mutation1(dna: torch.Tensor, Pm: float):
-    (NP, L) = dna.shape
-    for i in range(NP):
-        P = torch.rand(size=(1,)).item()
-        if P < Pm:
-            tubian = torch.randint(0, L, size=(
-                1,), device=device, dtype=torch.int)
-            dna[i, tubian.item()] = bianyi(dna[i, tubian.item()])
+    P = (torch.rand(size=(NP, L))-Pm * torch.ones(size=(NP, L))
+         ).to(device=device, dtype=torch.float)
+    dna = torch.where(P > 0, input=dna, other=1-dna)
     return dna
 
 
@@ -150,11 +128,11 @@ if __name__ == "__main__":
 
     start_time = time.time()
     G = 1000
-    _, ybest = GA(G=G, NP=150, Pc=0.80, Pm=0.050)
+    _, ybest = GA(G=G, NP=200, Pc=0.75, Pm=0.050, L=40)
     x = torch.arange(1, G+1).to(device=cpu)
     end_time = time.time()
     print("算法耗时：", end_time-start_time)
 
-    fig, ax = plt.subplots()
+    _, ax = plt.subplots()
     ax.plot(x.to(device=cpu), ybest.to(device=cpu))
     plt.show()
