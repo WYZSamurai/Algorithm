@@ -1,8 +1,6 @@
 # 针对x=(1,1)的情况
-
-
 import torch
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 import time
 
 
@@ -135,6 +133,12 @@ if __name__ == "__main__":
     x = torch.arange(1, G+1).to(device=cpu)
     print("算法耗时：", end_time-start_time)
 
-    _, ax = plt.subplots()
-    ax.plot(x.to(device=cpu), ybest.to(device=cpu))
-    plt.show()
+    fig = go.Figure()
+    fig.add_traces(
+        go.Scatter(x=x, y=ybest)
+    )
+    fig.update_layout(
+        # ['ggplot2', 'seaborn', 'simple_white', 'plotly', 'plotly_white', 'plotly_dark', 'presentation', 'xgridoff', 'ygridoff', 'gridon', 'none']
+        template="simple_white",
+    )
+    fig.show()
