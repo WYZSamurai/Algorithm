@@ -127,7 +127,7 @@ if __name__ == "__main__":
     G = 20
 
     start_time = time.time()
-    ybest = GA(G=G, NP=200, Pc=0.80, Pm=0.050, L=40)
+    ybest = GA(G=G, NP=200, Pc=0.80, Pm=0.100, L=40)
     end_time = time.time()
 
     x = torch.arange(1, G+1).to(device=cpu)
