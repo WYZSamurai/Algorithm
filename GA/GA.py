@@ -1,16 +1,19 @@
+# 针对x=(1,1)的情况
+
+
 import torch
 import matplotlib.pyplot as plt
 import time
 
 
 # 选择设备
-if torch.cuda.is_available():
-    device = torch.device("cuda")
-else:
-    device = torch.device("cpu")
+# if torch.cuda.is_available():
+#     device = torch.device("cuda")
+# else:
+#     device = torch.device("cpu")
 
 
-# device = torch.device("cpu")
+device = torch.device("cpu")
 cpu = torch.device("cpu")
 
 
