@@ -4,13 +4,13 @@ import time
 
 
 # 选择设备
-# if torch.cuda.is_available():
-#     device = torch.device("cuda")
-# else:
-#     device = torch.device("cpu")
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+else:
+    device = torch.device("cpu")
 
 
-device = torch.device("cpu")
+# device = torch.device("cpu")
 cpu = torch.device("cpu")
 
 
@@ -34,16 +34,13 @@ def decode(dna: torch.Tensor, mx: float, md: float):
     temp = torch.ones(size=(L, 1)).to(device=device, dtype=torch.float)
     # 定义个体十进制值
     x = scale*torch.mm(t2, temp)+mx
-    # print("X值为：", x)
     # 定义个体适应度
     fit = -func(x=x)
-    # print("初始适应值为：", fit)
-    # print("平均适应值为：", (fit.sum()/NP).item())
     # 筛出适应度最值
     maxindex = torch.argmax(fit)
     minindex = torch.argmin(fit)
     # 保存最佳个体的dna、十进制值、适应度
-    # dnabest = dna[maxindex]
+    dnabest = dna[maxindex, :]
     xbest = x[maxindex]
     ybest = func(xbest)
     print("此代最小值为：", ybest.item())
@@ -54,7 +51,7 @@ def decode(dna: torch.Tensor, mx: float, md: float):
     else:
         fit = (fit-fit[minindex])/(fit[maxindex]-fit[minindex])
     # print("归一化适应值为：", fit)
-    return fit, xbest, ybest
+    return fit, xbest, ybest, dnabest
 
 
 # 选择阶段
@@ -62,7 +59,6 @@ def selection(dna: torch.Tensor, fit: torch.Tensor):
     NP = dna.shape[0]
     # 赌轮盘选择
     P = (fit/fit.sum()).reshape(NP,)
-    # print("群体概率为：", P)
     # 根据概率选择个体
     # replacement是否放回
     index = torch.multinomial(input=P, num_samples=NP, replacement=True)
@@ -107,30 +103,33 @@ def GA(NP=50, L=20, G=100, Pc=0.8, Pm=0.05, mx=0, md=10):
     # GA循环
     for t in range(G):
         print("第", t+1, "轮迭代")
-        # print("群体dna为：", dna)
         # 解码及计算适应值
-        fit, xbest[t], ybest[t] = decode(dna=dna, mx=mx, md=md)
+        fit, xbest[t], ybest[t], dnabest = decode(dna=dna, mx=mx, md=md)
         # 选择阶段
         dna = selection(dna=dna, fit=fit)
         # 交叉操作
         dna = crossover(dna=dna, Pc=Pc)
         # 变异操作
         dna = mutation(dna=dna, Pm=Pm)
+        # 将bestdna传到下一代
+        dna[1, :] = dnabest
 
     minindex = torch.argmin(ybest)
     print("最佳x值为：", xbest[minindex].item())
     print("函数最小值为：", ybest[minindex].item())
 
-    return xbest, ybest
+    return ybest
 
 
 if __name__ == "__main__":
 
+    G = 20
+
     start_time = time.time()
-    G = 1000
-    _, ybest = GA(G=G, NP=200, Pc=0.75, Pm=0.050, L=40)
-    x = torch.arange(1, G+1).to(device=cpu)
+    ybest = GA(G=G, NP=200, Pc=0.80, Pm=0.050, L=40)
     end_time = time.time()
+
+    x = torch.arange(1, G+1).to(device=cpu)
     print("算法耗时：", end_time-start_time)
 
     _, ax = plt.subplots()
