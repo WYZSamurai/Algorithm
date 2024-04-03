@@ -30,11 +30,9 @@ def decode(dna: torch.Tensor, mx: float, md: float):
     temp = (2*torch.ones(size=(L,))).pow(torch.arange(0, L)
                                          ).to(device=device, dtype=torch.float)
     temp, _ = torch.sort(temp, descending=True)
-    temp = torch.diag(temp)
-    t2 = torch.mm(dna, temp)
-    temp = torch.ones(size=(L, 1)).to(device=device, dtype=torch.float)
+    temp = temp.reshape(L, 1)
     # 定义个体十进制值
-    x = scale*torch.mm(t2, temp)+mx
+    x = scale*torch.mm(dna, temp)+mx
     # 定义个体适应度
     fit = -func(x=x)
     # 筛出适应度最值
@@ -51,7 +49,6 @@ def decode(dna: torch.Tensor, mx: float, md: float):
         fit = fit/fit.sum()
     else:
         fit = (fit-fit[minindex])/(fit[maxindex]-fit[minindex])
-    # print("归一化适应值为：", fit)
     return fit, xbest, ybest, dnabest
 
 
