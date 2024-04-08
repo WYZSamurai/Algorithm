@@ -1,14 +1,12 @@
 import plotly.graph_objects as go
 import torch
+import time
 
 
-# 选择设备
 # if torch.cuda.is_available():
 #     device = torch.device("cuda")
 # else:
 #     device = torch.device("cpu")
-
-
 device = torch.device("cpu")
 cpu = torch.device("cpu")
 
@@ -18,7 +16,7 @@ def func(x: torch.Tensor):
     return y
 
 
-def plot():
+def pl():
     n = 1000
     x1 = torch.linspace(-10, 10, n)
     x2 = torch.linspace(-10, 10, n)
@@ -46,22 +44,17 @@ def decode(dna: torch.Tensor, mx: float, md: float):
     a, _ = a.sort(descending=True)
     x = scale*torch.matmul(dna, a)+mx
 
-    # 计算适应值
     fit = torch.zeros(NP,).to(dtype=torch.float, device=device)
     for i in range(NP):
         fit[i] = func(x[i])
 
-    # 筛出适应度最值
     maxindex = torch.argmax(fit)
     minindex = torch.argmin(fit)
 
-    # 保存最佳个体的dna、十进制值、适应度
     dnabest = dna[maxindex]
     xbest = x[maxindex]
     ybest = func(xbest)
 
-    # 适应值归一化操作
-    # 注意dna全部一致情况
     if fit[maxindex]-fit[minindex] == 0:
         fit = fit/fit.sum()
     else:
@@ -71,7 +64,7 @@ def decode(dna: torch.Tensor, mx: float, md: float):
     # print("X值：\n", x)
     # print("fit值：\n", fit)
     print("最佳x值：\n", xbest)
-    # print("最佳y值：\n", ybest)
+    print("最佳y值：\n", ybest)
     return fit, xbest, ybest, dnabest
 
 
@@ -118,12 +111,28 @@ def GA(NP=50, L=20, m=2, n=1, G=100, Pc=0.8, Pm=0.05, mx=0, md=10):
         dna[0] = dnabest
 
     bestindex = torch.argmax(ybest)
+    print("算法结束")
     print("最佳x值为：\n", xbest[bestindex])
     print("最佳函数值为：\n", ybest[bestindex])
-
     return ybest
 
 
 if __name__ == "__main__":
-    GA()
-    # plot()
+    G = 1000
+
+    start_time = time.time()
+    ybest = GA(G=G, NP=200, Pc=0.80, Pm=0.100, L=40)
+    end_time = time.time()
+
+    x = torch.arange(1, G+1).to(device=cpu)
+    print("算法耗时：", end_time-start_time)
+
+    fig = go.Figure()
+    fig.add_traces(
+        go.Scatter(x=x, y=ybest)
+    )
+    fig.update_layout(
+        # ['ggplot2', 'seaborn', 'simple_white', 'plotly', 'plotly_white', 'plotly_dark', 'presentation', 'xgridoff', 'ygridoff', 'gridon', 'none']
+        template="simple_white",
+    )
+    fig.show()

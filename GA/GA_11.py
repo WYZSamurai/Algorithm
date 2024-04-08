@@ -30,16 +30,15 @@ def decode(dna: torch.Tensor, mx: float, md: float):
     temp = (2*torch.ones(size=(L,))).pow(torch.arange(0, L)
                                          ).to(device=device, dtype=torch.float)
     temp, _ = torch.sort(temp, descending=True)
-    temp = temp.reshape(L, 1)
     # 定义个体十进制值
-    x = scale*torch.mm(dna, temp)+mx
+    x = scale*torch.matmul(dna, temp)+mx
     # 定义个体适应度
-    fit = -func(x=x)
+    fit = -func(x)
     # 筛出适应度最值
     maxindex = torch.argmax(fit)
     minindex = torch.argmin(fit)
     # 保存最佳个体的dna、十进制值、适应度
-    dnabest = dna[maxindex, :]
+    dnabest = dna[maxindex]
     xbest = x[maxindex]
     ybest = func(xbest)
     print("此代最小值为：", ybest.item())
@@ -60,7 +59,7 @@ def selection(dna: torch.Tensor, fit: torch.Tensor):
     # 根据概率选择个体
     # replacement是否放回
     index = torch.multinomial(input=P, num_samples=NP, replacement=True)
-    dna = dna[index, :]
+    dna = dna[index]
     return dna
 
 
@@ -79,8 +78,7 @@ def crossover(dna: torch.Tensor, Pc: float):
 
 # 变异操作
 def mutation(dna: torch.Tensor, Pm: float):
-    (NP, L) = dna.shape
-    P = (torch.rand(size=(NP, L))-Pm * torch.ones(size=(NP, L))
+    P = (torch.rand(size=dna.shape)-Pm * torch.ones(size=dna.shape)
          ).to(device=device, dtype=torch.float)
     dna = torch.where(P > 0, input=dna, other=1-dna)
     return dna
@@ -104,13 +102,13 @@ def GA(NP=50, L=20, G=100, Pc=0.8, Pm=0.05, mx=0, md=10):
         # 解码及计算适应值
         fit, xbest[t], ybest[t], dnabest = decode(dna=dna, mx=mx, md=md)
         # 选择阶段
-        dna = selection(dna=dna, fit=fit)
+        dna = selection(dna, fit)
         # 交叉操作
-        dna = crossover(dna=dna, Pc=Pc)
+        dna = crossover(dna, Pc)
         # 变异操作
-        dna = mutation(dna=dna, Pm=Pm)
+        dna = mutation(dna, Pm)
         # 将bestdna传到下一代
-        dna[1, :] = dnabest
+        dna[0] = dnabest
 
     minindex = torch.argmin(ybest)
     print("最佳x值为：", xbest[minindex].item())
