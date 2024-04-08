@@ -79,7 +79,7 @@ def selection(dna: torch.Tensor, fit: torch.Tensor):
 def crossover(dna: torch.Tensor, Pc: float):
     NP = dna.shape[0]
     L = dna.shape[3]
-    for i in range(NP, 2):
+    for i in range(0, NP, 2):
         P = torch.rand(size=(1,)).item()
         if P < Pc:
             randcut = torch.randint(int(L/2), L, (1,)).item()
