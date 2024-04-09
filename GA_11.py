@@ -119,15 +119,14 @@ def GA(NP=50, L=20, G=100, Pc=0.8, Pm=0.05, mx=0, md=10):
 
 if __name__ == "__main__":
 
-    G = 20
+    G = 1000
 
     start_time = time.time()
     ybest = GA(G=G, NP=200, Pc=0.80, Pm=0.100, L=40)
     end_time = time.time()
-
-    x = torch.arange(1, G+1).to(device=cpu)
     print("算法耗时：", end_time-start_time)
 
+    x = torch.arange(1, G+1).to(device=cpu)
     fig = go.Figure()
     fig.add_traces(
         go.Scatter(x=x, y=ybest)

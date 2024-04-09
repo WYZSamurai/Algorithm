@@ -11,27 +11,28 @@ device = torch.device("cpu")
 cpu = torch.device("cpu")
 
 
+# 适应度函数
 def func(x: torch.Tensor):
     y = torch.matmul(x.t(), x)
     return y
 
 
-def pl():
-    n = 1000
-    x1 = torch.linspace(-10, 10, n)
-    x2 = torch.linspace(-10, 10, n)
-    x = x1.reshape(n, 1)@torch.ones(1, n)
-    y = x2.reshape(n, 1)@torch.ones(1, n)
-    z = x**2+y.t()**2
+# def pl():
+#     n = 1000
+#     x1 = torch.linspace(-10, 10, n)
+#     x2 = torch.linspace(-10, 10, n)
+#     x = x1.reshape(n, 1)@torch.ones(1, n)
+#     y = x2.reshape(n, 1)@torch.ones(1, n)
+#     z = x**2+y.t()**2
 
-    fig = go.Figure()
-    fig.add_trace(
-        go.Surface(x=x1, y=x2, z=z, cauto=True, colorscale="rainbow"),
-    )
-    fig.update_layout(
-        template="simple_white",
-    )
-    fig.show()
+#     fig = go.Figure()
+#     fig.add_trace(
+#         go.Surface(x=x1, y=x2, z=z, cauto=True, colorscale="rainbow"),
+#     )
+#     fig.update_layout(
+#         template="simple_white",
+#     )
+#     fig.show()
 
 
 def decode(dna: torch.Tensor, mx: float, md: float):
@@ -121,7 +122,7 @@ if __name__ == "__main__":
     G = 1000
 
     start_time = time.time()
-    ybest = GA(G=G, NP=200, Pc=0.80, Pm=0.100, L=40)
+    ybest = GA(NP=100, L=20, m=1, n=1, G=100, Pc=0.8, Pm=0.05, mx=0, md=10)
     end_time = time.time()
 
     x = torch.arange(1, G+1).to(device=cpu)
